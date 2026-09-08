@@ -1,0 +1,38 @@
+name: biyan
+description: "彼颜 - 记录生活碎片，寻找同频共振"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.3
+  intl: ^0.20.2
+  image_picker: ^1.2.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  record: ^6.2.1
+  audioplayers: ^6.7.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/logo.jpg
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  config:
+    enable-swift-package-manager: false

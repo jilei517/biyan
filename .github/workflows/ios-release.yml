@@ -32,9 +32,10 @@ jobs:
           xcodebuild -version
 
 
-      - uses: subosito/flutter-action@v1
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.5'
+          channel: stable
+          flutter-version: '3.47.2'
 
       - uses: cedvdb/action-flutter-build-ios@v1
         with:

@@ -114,7 +114,7 @@ class SettingsScreen extends StatelessWidget {
                       onTap: () => _confirmAction(
                         context,
                         title: '退出账号',
-                        message: '退出后将返回登录页，确定退出吗？',
+                        message: '退出后将恢复默认资料，确定退出吗？',
                         confirmText: '确认退出',
                         onConfirm: onLogout,
                       ),

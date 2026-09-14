@@ -100,9 +100,9 @@ class _ProfileTabState extends State<ProfileTab> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            UserProfileChip(label: widget.profile.gender),
+                            UserProfileChip(label: widget.profile.displayGender),
                             const SizedBox(width: 8),
-                            UserProfileChip(label: '${widget.profile.age}岁'),
+                            UserProfileChip(label: widget.profile.displayAge),
                           ],
                         ),
                       ],

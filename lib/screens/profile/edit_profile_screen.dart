@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:biyan/data/image_urls.dart';
 import 'package:biyan/models/user_profile.dart';
 import 'package:biyan/services/image_storage_service.dart';
 import 'package:biyan/theme/app_colors.dart';
@@ -26,7 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _signatureController;
   late String _avatar;
   late String _gender;
-  late int _age;
+  late int? _age;
   bool _isPickingAvatar = false;
 
   static const _genderOptions = ['男', '女', '保密'];
@@ -71,8 +72,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickAge() async {
-    var selectedAge = _age;
-    final controller = FixedExtentScrollController(initialItem: _age - 16);
+    var selectedAge = _age ?? 24;
+    final controller = FixedExtentScrollController(initialItem: selectedAge - 16);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -183,7 +184,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     widget.onSave(
-      widget.profile.copyWith(
+      UserProfile(
         nickname: nickname,
         avatar: _avatar,
         gender: _gender,
@@ -256,10 +257,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       ),
                                     ),
                                   )
-                                : AppImage(
-                                    url: _avatar,
-                                    assetFallback: 'assets/images/avatar.png',
-                                  ),
+                                : _avatar.isEmpty
+                                    ? const ColoredBox(
+                                        color: AppColors.purpleLight,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.person_outline,
+                                            size: 40,
+                                            color: AppColors.purple,
+                                          ),
+                                        ),
+                                      )
+                                    : AppImage(
+                                        url: _avatar,
+                                        assetFallback:
+                                            'assets/images/avatar.png',
+                                      ),
                           ),
                         ),
                         Positioned(
@@ -287,9 +300,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    '点击更换头像',
+                    '点头像从相册选，或从下面挑一张',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: ImageUrls.presetAvatars.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  itemBuilder: (context, index) {
+                    final url = ImageUrls.presetAvatars[index];
+                    final selected = _avatar == url;
+                    return GestureDetector(
+                      onTap: () => setState(() => _avatar = url),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected
+                                ? AppColors.purple
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: ClipOval(
+                            child: AppImage(url: url),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 _FieldSection(
@@ -360,10 +408,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '$_age 岁',
-                            style: const TextStyle(
+                            _age == null ? '未设置' : '$_age 岁',
+                            style: TextStyle(
                               fontSize: 16,
-                              color: AppColors.textPrimary,
+                              color: _age == null
+                                  ? AppColors.textMuted
+                                  : AppColors.textPrimary,
                             ),
                           ),
                           Icon(

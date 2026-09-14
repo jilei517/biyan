@@ -9,6 +9,7 @@ import 'package:biyan/models/memo_item.dart';
 import 'package:biyan/models/outfit_item.dart';
 import 'package:biyan/models/user_profile.dart';
 import 'package:biyan/models/watched_movie.dart';
+import 'package:biyan/screens/auth/login_screen.dart';
 import 'package:biyan/screens/home/banner_detail_screen.dart';
 import 'package:biyan/screens/home/banner_more_screen.dart';
 import 'package:biyan/screens/home/complaint_screen.dart';
@@ -88,14 +89,15 @@ class _MainShellState extends State<MainShell> {
   List<String> _customTags = [];
   List<DiaryEntry> _diaryEntries = [];
   List<MemoItem> _memos = [];
-  int _companionDays = 365;
-  int _moviesWatched = 28;
+  int _companionDays = 0;
+  int _moviesWatched = 0;
   DateTime _companionStartDate = DateTime.now();
   List<WatchedMovie> _watchedMovies = [];
   Set<int> _blockedOutfitIds = {};
   Set<int> _blockedBannerIds = {};
   Set<String> _blockedAuthorIds = {};
   UserProfile _userProfile = UserProfile.defaultProfile;
+  bool _loggedIn = false;
 
   @override
   void initState() {
@@ -115,6 +117,7 @@ class _MainShellState extends State<MainShell> {
       StorageService.loadBlockedBannerIds(),
       StorageService.loadBlockedAuthorIds(),
       StorageService.loadUserProfile(),
+      StorageService.isLoggedIn(),
     ]);
 
     if (!mounted) return;
@@ -133,7 +136,74 @@ class _MainShellState extends State<MainShell> {
       _blockedBannerIds = results[7] as Set<int>;
       _blockedAuthorIds = results[8] as Set<String>;
       _userProfile = results[9] as UserProfile;
+      _loggedIn = results[10] as bool;
     });
+  }
+
+  Future<void> _onTabTapped(int index) async {
+    if (index == 0) {
+      setState(() => _currentTab = 0);
+      return;
+    }
+    if (!await _requireLogin()) return;
+    if (!mounted) return;
+    setState(() => _currentTab = index);
+  }
+
+  Future<bool> _requireLogin() async {
+    if (_loggedIn) return true;
+    final alreadyLoggedIn = await StorageService.isLoggedIn();
+    if (!mounted) return false;
+    if (alreadyLoggedIn) {
+      await _reloadHobbies();
+      if (!mounted) return false;
+      setState(() => _loggedIn = true);
+      return true;
+    }
+
+    final loggedIn = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => LoginScreen(
+          onLogin: () => StorageService.setLoggedIn(true),
+        ),
+      ),
+    );
+    if (loggedIn == true && mounted) {
+      await _reloadHobbies();
+      if (!mounted) return false;
+      setState(() => _loggedIn = true);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _reloadHobbies() async {
+    final hobbies = await StorageService.loadSelectedHobbies();
+    final tags = await StorageService.loadCustomTags();
+    final diaries = await StorageService.loadDiaryEntries();
+    final startDate = await StorageService.loadCompanionStartDate();
+    final movies = await StorageService.loadWatchedMovies();
+    final profile = await StorageService.loadUserProfile();
+    final memos = await StorageService.loadMemos();
+    if (!mounted) return;
+    setState(() {
+      _selectedHobbies = hobbies;
+      _customTags = tags;
+      _diaryEntries = diaries;
+      _companionStartDate = startDate;
+      _companionDays = StorageService.companionDaysFromStart(startDate);
+      _watchedMovies = movies;
+      _moviesWatched = movies.length;
+      _userProfile = profile;
+      _memos = memos;
+    });
+  }
+
+  Future<void> _openHomeDetail(SecondaryScreen screen) async {
+    if (!await _requireLogin()) return;
+    if (!mounted) return;
+    _pushScreen(screen);
   }
 
   void _pushScreen(SecondaryScreen screen) {
@@ -224,15 +294,36 @@ class _MainShellState extends State<MainShell> {
 
   Future<void> _logout() async {
     await StorageService.setLoggedIn(false);
-    await StorageService.resetUserProfile();
     if (!mounted) return;
+    setState(() {
+      _loggedIn = false;
+      _currentTab = 0;
+      _clearAccountContent();
+    });
     _endSession();
   }
 
   Future<void> _deleteAccount() async {
     await StorageService.clearAllData();
     if (!mounted) return;
+    setState(() {
+      _loggedIn = false;
+      _currentTab = 0;
+      _clearAccountContent();
+    });
     _endSession();
+  }
+
+  void _clearAccountContent() {
+    _selectedHobbies = [];
+    _customTags = [];
+    _diaryEntries = [];
+    _companionDays = 0;
+    _moviesWatched = 0;
+    _watchedMovies = [];
+    _companionStartDate = DateTime.now();
+    _memos = [];
+    _userProfile = UserProfile.forAccount('');
   }
 
   void _endSession() {
@@ -303,16 +394,17 @@ class _MainShellState extends State<MainShell> {
       children: [
         HomeTab(
           profile: _userProfile,
+          loggedIn: _loggedIn,
           blockedOutfitIds: _blockedOutfitIds,
           blockedBannerIds: _blockedBannerIds,
           blockedAuthorIds: _blockedAuthorIds,
-          onBannerTap: (banner) => _pushScreen(
+          onBannerTap: (banner) => _openHomeDetail(
             SecondaryScreen(
               type: SecondaryScreenType.bannerDetail,
               banner: banner,
             ),
           ),
-          onOutfitTap: (outfit) => _pushScreen(
+          onOutfitTap: (outfit) => _openHomeDetail(
             SecondaryScreen(
               type: SecondaryScreenType.outfitDetail,
               outfit: outfit,
@@ -519,7 +611,7 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentTab,
-        onTap: (index) => setState(() => _currentTab = index),
+        onTap: _onTabTapped,
       ),
     );
   }

@@ -12,6 +12,7 @@ class HomeTab extends StatelessWidget {
   const HomeTab({
     super.key,
     required this.profile,
+    required this.loggedIn,
     required this.onBannerTap,
     required this.onOutfitTap,
     this.blockedOutfitIds = const {},
@@ -20,6 +21,7 @@ class HomeTab extends StatelessWidget {
   });
 
   final UserProfile profile;
+  final bool loggedIn;
   final ValueChanged<BannerItem> onBannerTap;
   final ValueChanged<OutfitItem> onOutfitTap;
   final Set<int> blockedOutfitIds;
@@ -45,38 +47,56 @@ class HomeTab extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                UserAvatar(avatar: profile.avatar, size: 44, showBorder: false),
+                if (loggedIn)
+                  UserAvatar(
+                    avatar: profile.avatar,
+                    size: 44,
+                    showBorder: false,
+                  )
+                else
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.purpleLight,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person_outline,
+                      size: 24,
+                      color: AppColors.purple,
+                    ),
+                  ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            fontStyle: FontStyle.italic,
-                            color: AppColors.textPrimary,
-                            letterSpacing: 1,
-                          ),
-                          children: [
-                            TextSpan(text: 'Hi, ${profile.nickname}'),
-                          ],
+                      Text(
+                        loggedIn ? 'Hi, ${profile.nickname}' : 'Hi，欢迎来到彼颜',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 1,
                         ),
                       ),
-                      if (profile.signature.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          profile.signature,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        loggedIn
+                            ? (profile.signature.isEmpty
+                                ? '今天也想记点什么'
+                                : profile.signature)
+                            : '登录后即可记录爱好、日记和陪伴',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),

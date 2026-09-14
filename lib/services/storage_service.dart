@@ -28,16 +28,12 @@ class StorageService {
   static const String _keyUserProfile = 'user_profile';
   static const String _keyIsLoggedIn = 'is_logged_in';
   static const String _keyAccounts = 'registered_accounts';
+  static const String _keyCurrentAccount = 'current_account';
   static const Map<String, String> _builtInAccounts = {
     '19246891921': 'zzz121',
   };
 
-  static SharedPreferences? _cachedPrefs;
-
-  static Future<SharedPreferences> get _prefs async {
-    _cachedPrefs ??= await SharedPreferences.getInstance();
-    return _cachedPrefs!;
-  }
+  static Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   static Future<void> warmup() async {
     await _prefs;
@@ -45,41 +41,47 @@ class StorageService {
 
   static Future<List<String>> loadSelectedHobbies() async {
     final prefs = await _prefs;
-    final list = prefs.getStringList(_keyHobbies);
-    if (list == null || list.isEmpty) {
+    final list = prefs.getStringList(await _hobbiesStorageKey());
+    if (list != null) return list;
+    if (await isDemoAccount()) {
       return List<String>.from(AppData.defaultSelectedHobbies);
     }
-    return list;
+    return [];
   }
 
   static Future<void> saveSelectedHobbies(List<String> hobbies) async {
     final prefs = await _prefs;
-    await prefs.setStringList(_keyHobbies, hobbies);
+    await prefs.setStringList(await _hobbiesStorageKey(), hobbies);
   }
 
   static Future<List<String>> loadCustomTags() async {
     final prefs = await _prefs;
-    final list = prefs.getStringList(_keyCustomTags);
-    if (list == null || list.isEmpty) {
+    final list = prefs.getStringList(await _customTagsStorageKey());
+    if (list != null) return list;
+    if (await isDemoAccount()) {
       return List<String>.from(AppData.defaultCustomTags);
     }
-    return list;
+    return [];
   }
 
   static Future<void> saveCustomTags(List<String> tags) async {
     final prefs = await _prefs;
-    await prefs.setStringList(_keyCustomTags, tags);
+    await prefs.setStringList(await _customTagsStorageKey(), tags);
   }
 
   static Future<List<DiaryEntry>> loadDiaryEntries() async {
     final prefs = await _prefs;
-    final raw = prefs.getString(_keyDiaries);
-    final storedVersion = prefs.getInt(_keyDiariesVersion) ?? 1;
+    final raw = prefs.getString(await _scopedKey(_keyDiaries));
+    final storedVersion =
+        prefs.getInt(await _scopedKey(_keyDiariesVersion)) ?? 1;
+    final demoAccount = await isDemoAccount();
 
     if (raw == null || raw.isEmpty) {
+      if (!demoAccount) return [];
       final defaults = AppData.defaultDiaryEntries();
-      unawaited(saveDiaryEntries(defaults).then((_) {
-        return prefs.setInt(_keyDiariesVersion, _diariesVersion);
+      unawaited(saveDiaryEntries(defaults).then((_) async {
+        final p = await _prefs;
+        await p.setInt(await _scopedKey(_keyDiariesVersion), _diariesVersion);
       }));
       return defaults;
     }
@@ -88,7 +90,7 @@ class StorageService {
         .map((e) => DiaryEntry.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    if (storedVersion < _diariesVersion) {
+    if (demoAccount && storedVersion < _diariesVersion) {
       final defaults = AppData.defaultDiaryEntries();
       final defaultById = {for (final e in defaults) e.id: e};
       final merged = existing.map((e) {
@@ -105,7 +107,7 @@ class StorageService {
         return bDate.compareTo(aDate);
       });
       await saveDiaryEntries(merged);
-      await prefs.setInt(_keyDiariesVersion, _diariesVersion);
+      await prefs.setInt(await _scopedKey(_keyDiariesVersion), _diariesVersion);
       return merged;
     }
 
@@ -115,14 +117,17 @@ class StorageService {
   static Future<void> saveDiaryEntries(List<DiaryEntry> entries) async {
     final prefs = await _prefs;
     final encoded = jsonEncode(entries.map((e) => e.toJson()).toList());
-    await prefs.setString(_keyDiaries, encoded);
+    await prefs.setString(await _scopedKey(_keyDiaries), encoded);
   }
 
   static Future<List<MemoItem>> loadMemos() async {
     final prefs = await _prefs;
-    final raw = prefs.getString(_keyMemos);
+    final raw = prefs.getString(await _scopedKey(_keyMemos));
     if (raw == null || raw.isEmpty) {
-      return AppData.defaultMemos();
+      if (!await isDemoAccount()) return [];
+      final defaults = AppData.defaultMemos();
+      unawaited(saveMemos(defaults));
+      return defaults;
     }
     final list = jsonDecode(raw) as List<dynamic>;
     return list
@@ -133,7 +138,7 @@ class StorageService {
   static Future<void> saveMemos(List<MemoItem> memos) async {
     final prefs = await _prefs;
     final encoded = jsonEncode(memos.map((e) => e.toJson()).toList());
-    await prefs.setString(_keyMemos, encoded);
+    await prefs.setString(await _scopedKey(_keyMemos), encoded);
   }
 
   static Future<int> loadCompanionDays() async {
@@ -143,9 +148,17 @@ class StorageService {
 
   static Future<DateTime> loadCompanionStartDate() async {
     final prefs = await _prefs;
-    final raw = prefs.getString(_keyCompanionStartDate);
+    final raw = prefs.getString(await _scopedKey(_keyCompanionStartDate));
     if (raw != null && raw.isNotEmpty) {
       return DateTime.parse(raw);
+    }
+
+    if (!await isDemoAccount()) {
+      return DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
     }
 
     final legacyDays = prefs.getInt(_keyCompanionDays) ?? 365;
@@ -158,7 +171,7 @@ class StorageService {
     final prefs = await _prefs;
     final normalized = DateTime(date.year, date.month, date.day);
     await prefs.setString(
-      _keyCompanionStartDate,
+      await _scopedKey(_keyCompanionStartDate),
       normalized.toIso8601String().split('T').first,
     );
   }
@@ -177,8 +190,9 @@ class StorageService {
 
   static Future<List<WatchedMovie>> loadWatchedMovies() async {
     final prefs = await _prefs;
-    final raw = prefs.getString(_keyWatchedMovies);
+    final raw = prefs.getString(await _scopedKey(_keyWatchedMovies));
     if (raw == null || raw.isEmpty) {
+      if (!await isDemoAccount()) return [];
       final defaults = AppData.defaultWatchedMovies();
       unawaited(saveWatchedMovies(defaults));
       return defaults;
@@ -193,8 +207,8 @@ class StorageService {
   static Future<void> saveWatchedMovies(List<WatchedMovie> movies) async {
     final prefs = await _prefs;
     final encoded = jsonEncode(movies.map((e) => e.toJson()).toList());
-    await prefs.setString(_keyWatchedMovies, encoded);
-    await prefs.setInt(_keyMoviesWatched, movies.length);
+    await prefs.setString(await _scopedKey(_keyWatchedMovies), encoded);
+    await prefs.setInt(await _scopedKey(_keyMoviesWatched), movies.length);
   }
 
   static Future<Set<int>> loadBlockedOutfitIds() async {
@@ -239,22 +253,24 @@ class StorageService {
 
   static Future<UserProfile> loadUserProfile() async {
     final prefs = await _prefs;
-    final raw = prefs.getString(_keyUserProfile);
+    final raw = prefs.getString(await _scopedKey(_keyUserProfile));
     if (raw == null || raw.isEmpty) {
-      final defaults = UserProfile.defaultProfile;
-      unawaited(saveUserProfile(defaults));
-      return defaults;
+      if (await isDemoAccount()) {
+        final defaults = UserProfile.defaultProfile;
+        unawaited(saveUserProfile(defaults));
+        return defaults;
+      }
+      return UserProfile.forAccount(await currentAccount());
     }
     return UserProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   static Future<void> saveUserProfile(UserProfile profile) async {
     final prefs = await _prefs;
-    await prefs.setString(_keyUserProfile, jsonEncode(profile.toJson()));
-  }
-
-  static Future<void> resetUserProfile() async {
-    await saveUserProfile(UserProfile.defaultProfile);
+    await prefs.setString(
+      await _scopedKey(_keyUserProfile),
+      jsonEncode(profile.toJson()),
+    );
   }
 
   static Future<void> clearAllData() async {
@@ -270,7 +286,35 @@ class StorageService {
   static Future<void> setLoggedIn(bool value) async {
     final prefs = await _prefs;
     await prefs.setBool(_keyIsLoggedIn, value);
+    if (!value) {
+      await prefs.remove(_keyCurrentAccount);
+    }
   }
+
+  static Future<void> setCurrentAccount(String account) async {
+    final prefs = await _prefs;
+    await prefs.setString(_keyCurrentAccount, account.trim());
+  }
+
+  static Future<String?> currentAccount() async {
+    final prefs = await _prefs;
+    return prefs.getString(_keyCurrentAccount);
+  }
+
+  static Future<bool> isDemoAccount() async {
+    final account = await currentAccount();
+    return account != null && _builtInAccounts.containsKey(account);
+  }
+
+  static Future<String> _scopedKey(String base) async {
+    final account = await currentAccount();
+    if (account == null || account.isEmpty) return base;
+    return '${base}_$account';
+  }
+
+  static Future<String> _hobbiesStorageKey() => _scopedKey(_keyHobbies);
+
+  static Future<String> _customTagsStorageKey() => _scopedKey(_keyCustomTags);
 
   static Future<Map<String, String>> loadAccounts() async {
     final prefs = await _prefs;
@@ -322,6 +366,7 @@ class StorageService {
     if (accounts.containsKey(trimmed)) return '该手机号已注册';
     accounts[trimmed] = password;
     await _saveAccounts(accounts);
+    await setCurrentAccount(trimmed);
     return null;
   }
 
@@ -334,6 +379,7 @@ class StorageService {
     final accounts = await loadAccounts();
     if (!accounts.containsKey(trimmed)) return '该手机号未注册';
     if (accounts[trimmed] != password) return '手机号或密码错误';
+    await setCurrentAccount(trimmed);
     return null;
   }
 }

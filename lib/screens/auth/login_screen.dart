@@ -55,12 +55,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _openRegister() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+  Future<void> _openRegister() async {
+    final registered = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
         builder: (context) => RegisterScreen(onRegistered: widget.onLogin),
       ),
     );
+    if (registered == true && mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   Future<void> _showAgreementDialog() async {
@@ -167,8 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await widget.onLogin();
 
-    if (mounted) {
-      setState(() => _submitting = false);
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -219,6 +222,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Navigator.of(context).canPop()
+                            ? IconButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                icon: const Icon(Icons.close, size: 22),
+                                color: AppColors.textPrimary,
+                              )
+                            : const SizedBox(height: 48),
+                      ),
                       const Spacer(flex: 2),
                       const AppLogo(size: 108, showShadow: true),
                       const SizedBox(height: 28),
@@ -311,7 +325,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   height: 1.4,
                                 ),
                                 children: [
-                                  const TextSpan(text: '登录即表示同意'),
+                                  const TextSpan(text: '登录/注册即表示同意'),
                                   TextSpan(
                                     text: '隐私协议',
                                     style: const TextStyle(

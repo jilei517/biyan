@@ -16,14 +16,28 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = ClipOval(
-      child: AppImage(
-        url: avatar,
-        width: size,
-        height: size,
-        assetFallback: 'assets/images/avatar.png',
-      ),
-    );
+    final content = avatar.isEmpty
+        ? SizedBox(
+            width: size,
+            height: size,
+            child: ColoredBox(
+              color: AppColors.purpleLight,
+              child: Center(
+                child: Icon(
+                  Icons.person_outline,
+                  size: size * 0.52,
+                  color: AppColors.purple,
+                ),
+              ),
+            ),
+          )
+        : AppImage(
+            url: avatar,
+            width: size,
+            height: size,
+            assetFallback: 'assets/images/avatar.png',
+          );
+    final image = ClipOval(child: content);
 
     if (!showBorder) return image;
 

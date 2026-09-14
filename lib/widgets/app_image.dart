@@ -59,7 +59,16 @@ class AppImage extends StatelessWidget {
         final cacheHeight = _cacheSize(resolvedHeight, devicePixelRatio);
 
         Widget image;
-        if (isAssetImagePath(url)) {
+        if (url.isEmpty) {
+          image = Image.asset(
+            assetFallback,
+            width: width,
+            height: height,
+            fit: fit,
+            cacheWidth: cacheWidth,
+            cacheHeight: cacheHeight,
+          );
+        } else if (isAssetImagePath(url)) {
           image = Image.asset(
             url,
             width: width,

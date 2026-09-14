@@ -78,7 +78,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
         return AlertDialog(
           title: const Text('最后确认'),
           content: const Text(
-            '注销后，彼颜中的本地数据将立即清空且无法找回，并将返回登录页。确定注销吗？',
+            '注销后，彼颜中的本地数据将立即清空且无法找回。确定注销吗？',
           ),
           actions: [
             TextButton(

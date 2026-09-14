@@ -59,7 +59,31 @@ class ImageUrls {
   static const String avatarAnimal =
       '$_base/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
   static const String avatarFood =
-      '$_base/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400';
+      '$_base/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
   static const String avatarLandscape =
-      '$_base/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400';
+      '$_base/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarMountain =
+      '$_base/572897/pexels-photo-572897.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarSea =
+      '$_base/189349/pexels-photo-189349.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarCat =
+      '$_base/1170986/pexels-photo-1170986.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarRabbit =
+      '$_base/326012/pexels-photo-326012.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarFox =
+      '$_base/247502/pexels-photo-247502.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+  static const String avatarBird =
+      '$_base/1661179/pexels-photo-1661179.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop';
+
+  static const List<String> presetAvatars = [
+    avatarLandscape,
+    avatarMountain,
+    avatarSea,
+    avatarAnimal,
+    avatarCat,
+    avatarRabbit,
+    avatarFox,
+    avatarBird,
+    avatarFood,
+  ];
 }

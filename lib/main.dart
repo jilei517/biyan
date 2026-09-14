@@ -14,10 +14,9 @@ Future<void> main() async {
   );
   try {
     await StorageService.warmup();
-    final loggedIn = await StorageService.isLoggedIn();
-    runApp(BiyanApp(loggedIn: loggedIn));
+    runApp(const BiyanApp());
   } catch (_) {
-    runApp(const BiyanApp(loggedIn: false));
+    runApp(const BiyanApp());
   } finally {
     binding.allowFirstFrame();
   }

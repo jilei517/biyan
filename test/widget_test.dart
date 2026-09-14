@@ -6,27 +6,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('已登录时直接进入首页', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({'is_logged_in': true});
-    await tester.pumpWidget(const BiyanApp(loggedIn: true));
+  testWidgets('启动后直接进入首页', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const BiyanApp());
+    await tester.pump();
     await tester.pump();
     expect(find.text('首页'), findsOneWidget);
+    expect(find.text('请输入手机号码'), findsNothing);
   });
 
-  testWidgets('未登录时直接进入登录页', (WidgetTester tester) async {
+  testWidgets('未登录点击爱好会弹出登录页', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const BiyanApp(loggedIn: false));
+    await tester.pumpWidget(const BiyanApp());
     await tester.pump();
-    expect(find.text('登录'), findsWidgets);
+    await tester.pump();
+
+    await tester.tap(find.text('爱好'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('请输入手机号码'), findsOneWidget);
   });
 
-  testWidgets('退出账号后返回登录页', (WidgetTester tester) async {
+  testWidgets('退出账号后仍留在首页', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'is_logged_in': true});
-    await tester.pumpWidget(const BiyanApp(loggedIn: true));
+    await tester.pumpWidget(const BiyanApp());
+    await tester.pump();
     await tester.pump();
 
     await tester.tap(find.text('我的'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
@@ -37,7 +47,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('登录'), findsWidgets);
-    expect(find.text('首页'), findsNothing);
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('登录'), findsNothing);
   });
 }

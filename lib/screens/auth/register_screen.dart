@@ -1,5 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:biyan/screens/profile/settings_text_screen.dart';
 import 'package:biyan/services/storage_service.dart';
 import 'package:biyan/theme/app_colors.dart';
 import 'package:biyan/widgets/app_branding.dart';
@@ -22,12 +24,145 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _submitting = false;
+  bool _agreed = false;
+  late final TapGestureRecognizer _privacyRecognizer;
+  late final TapGestureRecognizer _userNoticeRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => _openDoc(SettingsDocType.privacy);
+    _userNoticeRecognizer = TapGestureRecognizer()
+      ..onTap = () => _openDoc(SettingsDocType.userNotice);
+  }
 
   @override
   void dispose() {
     _accountController.dispose();
     _passwordController.dispose();
+    _privacyRecognizer.dispose();
+    _userNoticeRecognizer.dispose();
     super.dispose();
+  }
+
+  void _openDoc(SettingsDocType type) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SettingsTextScreen(
+          type: type,
+          onBack: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAgreementDialog() async {
+    final agreed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black38,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '温馨提示',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '请先阅读《用户须知》和《隐私协议》',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          '不同意',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          '同意',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (agreed == true && mounted) {
+      setState(() => _agreed = true);
+      await _submitRegister();
+    }
+  }
+
+  Future<void> _submitRegister() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+
+    final error = await StorageService.registerAccount(
+      _accountController.text,
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _submitting = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+
+    await widget.onRegistered();
+    if (mounted) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   Future<void> _handleConfirm() async {
@@ -49,27 +184,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (_submitting) return;
-    setState(() => _submitting = true);
-
-    final error = await StorageService.registerAccount(
-      _accountController.text,
-      _passwordController.text,
-    );
-
-    if (!mounted) return;
-    setState(() => _submitting = false);
-
-    if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
-      return;
-    }
-
-    await widget.onRegistered();
-    if (mounted) {
-      Navigator.of(context).pop();
+    if (_agreed) {
+      await _submitRegister();
+    } else {
+      await _showAgreementDialog();
     }
   }
 
@@ -163,6 +281,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: _agreed,
+                        activeColor: AppColors.purple,
+                        side: const BorderSide(color: AppColors.textMuted),
+                        onChanged: (value) {
+                          setState(() => _agreed = value ?? false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                          children: [
+                            const TextSpan(text: '登录/注册即表示同意'),
+                            TextSpan(
+                              text: '隐私协议',
+                              style: const TextStyle(
+                                color: AppColors.purple,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              recognizer: _privacyRecognizer,
+                            ),
+                            const TextSpan(text: '和'),
+                            TextSpan(
+                              text: '用户须知',
+                              style: const TextStyle(
+                                color: AppColors.purple,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              recognizer: _userNoticeRecognizer,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const Spacer(flex: 2),
               ],

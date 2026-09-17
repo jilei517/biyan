@@ -1,7 +1,7 @@
 name: biyan
 description: "彼颜 - 记录生活碎片，寻找同频共振"
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.1+3
 
 environment:
   sdk: ^3.10.7

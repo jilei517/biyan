@@ -54,12 +54,36 @@ jobs:
           # 将 IPA 文件名设置为此作业后续步骤的环境变量
           echo "IPA_FILE_NAME=$IPA_NAME" >> $GITHUB_ENV
 
+      - name: Delete old artifacts
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              },
+            );
+            for (const artifact of artifacts) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+
       - name: Archive IPA
-        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        uses: actions/upload-artifact@v6
         with:
           name: release-ipa
           # 使用上一步设置的环境变量
           path: ${{ env.IPA_FILE_NAME }}
+          retention-days: 1
+          if-no-files-found: warn
 
       - name: Upload using iTMSTransporter
         env:

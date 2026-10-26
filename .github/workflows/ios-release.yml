@@ -59,7 +59,8 @@ jobs:
 
 
           keychain-password: 111111
-            - name: Upload using iTMSTransporter
+
+      - name: Upload using iTMSTransporter
         env:
           WORKING_DIRECTORY: build/ios/ipa
           IPA_FILE_NAME: 彼颜.ipa
